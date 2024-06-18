@@ -11,15 +11,22 @@ public partial class Bot
 	{
 		// TODO: распараллелить запуск SearchBestMove
 		var (turn, score) = CreateTasks(rocket)
-			.First()
+            .MaxBy(task => task.Result.Score)
 			.GetAwaiter()
 			.GetResult();
-		
+
 		return rocket.Move(turn, level);
 	}
 	
 	public List<Task<(Turn Turn, double Score)>> CreateTasks(Rocket rocket)
 	{
-		return new() { Task.Run(() => SearchBestMove(rocket, new Random(random.Next()), iterationsCount)) };
+		List<Task<(Turn Turn, double Score)>> tasks = new();
+		for (int i = 0; i < threadsCount; i++)
+		{
+			Task<(Turn Turn, double Score)> task = Task.Run(() => SearchBestMove(rocket, new Random(random.Next()), iterationsCount / threadsCount));
+			tasks.Add(task);
+		}
+		Task.WaitAll(tasks.ToArray());
+		return tasks;
 	}
 }
